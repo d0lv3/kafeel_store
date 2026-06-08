@@ -1,0 +1,9 @@
+{
+  "name": "kafeel-market",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ماركت الكفيل — Kafeel Market PWA (static site; env.js generated at build time)",
+  "scripts": {
+    "build": "node generate-env.js"
+  }
+}

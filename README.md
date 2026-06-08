@@ -28,6 +28,26 @@ Open <http://localhost:8080/index.html> (customer) and
   `SUPABASE_SERVICE_KEY`).
 - Without `env.js` the app still loads, on local fallback data only.
 
+## Deploying to Vercel
+
+`env.js` is gitignored, so it isn't in the repo — instead it's **generated at
+build time** from environment variables by `generate-env.js` (wired up in
+`vercel.json`). In **Vercel → Project → Settings → Environment Variables** add:
+
+| Name | Value |
+|------|-------|
+| `SUPABASE_URL` | `https://YOUR_PROJECT.supabase.co` |
+| `SUPABASE_ANON_KEY` | your anon public key |
+
+(Optional, for push: `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`,
+`FIREBASE_PROJECT_ID`, `FIREBASE_STORAGE_BUCKET`, `FIREBASE_SENDER_ID`,
+`FIREBASE_APP_ID`, `FCM_VAPID_KEY`.)
+
+Then redeploy. The build writes `env.js`, Supabase connects, and product/section
+photos load from Storage. Without these vars the site falls back to local sample
+data (and bundled images aren't shipped, so photos would be missing) — that's the
+symptom that means the env vars aren't set.
+
 ## Database setup
 
 Run the SQL files in the Supabase SQL Editor **in order** — see

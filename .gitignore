@@ -20,6 +20,7 @@ assets/categories/
 .claude/
 .vscode/
 .idea/
+.vercel/
 node_modules/
 *.log
 .DS_Store
