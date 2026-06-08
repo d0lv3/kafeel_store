@@ -1,0 +1,26 @@
+{
+  "name": "ماركت الكفيل",
+  "short_name": "الكفيل",
+  "description": "تسوّق منتجاتك اليومية من ماركت الكفيل مع توصيل سريع",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#FCFEFC",
+  "theme_color": "#3CA043",
+  "dir": "rtl",
+  "lang": "ar",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "assets/kafeel_icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/kafeel_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

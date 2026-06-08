@@ -1,0 +1,32 @@
+# ─── Secrets / local backend config (NEVER commit) ───────────
+env.js
+.env
+.env.*
+*.key
+*.pem
+*service-account*.json
+service-account*.json
+
+# ─── Source APK (3rd-party, do not redistribute) ─────────────
+app.apk
+*.apk
+
+# ─── Bundled media already served from Supabase Storage ──────
+# Product & section photos live in the `product-images` bucket / CDN.
+assets/products/
+assets/categories/
+
+# ─── Editor / OS / tooling ───────────────────────────────────
+.claude/
+.vscode/
+.idea/
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Scratch / temp ──────────────────────────────────────────
+tmp/
+temp/
+*.tmp

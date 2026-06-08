@@ -1,0 +1,27 @@
+{
+  "name": "الكفيل — لوحة التحكم",
+  "short_name": "الكفيل أدمن",
+  "description": "لوحة تحكم ماركت الكفيل لإدارة الطلبات والقائمة",
+  "start_url": "/admin.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FCFEFC",
+  "theme_color": "#1a1a2e",
+  "dir": "rtl",
+  "lang": "ar",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "assets/kafeel_icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/kafeel_icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

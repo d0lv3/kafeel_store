@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ماركت الكفيل — اطلب الآن</title>
+  <meta name="description" content="تسوّق البقالة والمواد الغذائية والمنزلية من ماركت الكفيل. توصيل سريع إلى باب بيتك!">
+  <meta name="theme-color" content="#3CA043">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/kafeel_icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══ LOADING SCREEN ═══ -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-content">
+    <img src="assets/kafeel_icon.png" alt="loading" class="loading-shawarma">
+    <p class="loading-text">جاري تحميل القائمة...</p>
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<!-- ═══ RESTAURANT CLOSED OVERLAY ═══ -->
+<div class="closed-overlay" id="closedOverlay" style="display:none">
+  <div class="closed-content">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#3CA043" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+    <h2>المتجر مغلق حالياً</h2>
+    <p>أوقات العمل: <strong>9:00 صباحاً — 12:00 منتصف الليل</strong></p>
+    <p class="closed-sub">نراكم قريباً إن شاء الله</p>
+  </div>
+</div>
+
+<div class="app-container" id="appContainer">
+
+  <!-- ═══ MENU SCREEN ═══ -->
+  <div class="screen active" id="menuScreen">
+
+    <!-- Header -->
+    <header class="app-header">
+      <img src="assets/kafeel_logo.png" alt="الكفيل" class="logo">
+      <div class="brand">
+        <span class="branch-name">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          فرع العزيزية
+        </span>
+      </div>
+      <div class="header-auth" id="headerAuth" style="display:none">
+        <button type="button" class="hauth-btn hauth-login" id="openLoginBtn">دخول</button>
+        <button type="button" class="hauth-btn hauth-register" id="openRegisterBtn">حساب جديد</button>
+      </div>
+      <div class="account-wrap" id="accountWrap" style="display:none">
+        <button type="button" class="account-chip" id="accountChip">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span id="accountName"></span>
+        </button>
+        <div class="account-menu" id="accountMenu" style="display:none">
+          <div class="account-menu-phone" id="accountMenuPhone"></div>
+          <button type="button" class="account-menu-item" id="logoutBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            تسجيل الخروج
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Categories (الأقسام) -->
+    <section class="categories-section">
+      <div class="categories-head">
+        <h2 class="categories-title">الأقسام</h2>
+        <button type="button" class="categories-more" id="categoriesMore">
+          المزيد
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+      </div>
+      <div class="categories-scroll" id="categoriesScroll"></div>
+    </section>
+
+    <!-- Special Offers (Dynamic — managed from the admin dashboard) -->
+    <div id="offersContainer"></div>
+
+    <!-- Menu Sections -->
+    <main id="menuContent"></main>
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-section">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3CA043" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div>
+          <strong>العنوان</strong>
+          <p>الشارع الجديد، مقابل المدينة الرياضية</p>
+        </div>
+      </div>
+      <div class="footer-section">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3CA043" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        <div>
+          <strong>رقم المتجر</strong>
+          <p><a href="tel:07726882892" class="footer-phone">0772 688 2892</a></p>
+        </div>
+      </div>
+      <div class="footer-section">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3CA043" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        <div>
+          <strong>تابعنا</strong>
+          <p><a href="https://www.instagram.com/kafeel.market" target="_blank" class="footer-insta">@kafeel.market</a></p>
+        </div>
+      </div>
+      <div class="footer-brand">ماركت الكفيل © 2026</div>
+    </footer>
+
+    <div style="height:80px"></div>
+  </div>
+
+  <!-- ═══ CHECKOUT SCREEN ═══ -->
+  <div class="screen" id="checkoutScreen">
+    <div class="checkout-view">
+      <button class="back-btn" id="backToMenu">→ العودة للقائمة</button>
+      <h2>إتمام الطلب</h2>
+
+      <form id="checkoutForm" novalidate>
+        <div class="form-group">
+          <label for="paymentMethod">طريقة الدفع</label>
+          <input type="text" id="paymentMethod" value="الدفع عند الاستلام" readonly class="locked-field">
+        </div>
+
+        <div class="form-group">
+          <label for="customerAddress">العنوان <span style="color:var(--danger)">*</span></label>
+          <textarea id="customerAddress" rows="2" placeholder="أدخل عنوان التوصيل بالتفصيل..." required></textarea>
+          <div class="error-text" id="addressError">العنوان مطلوب</div>
+        </div>
+
+        <div class="form-group">
+          <label for="customerPhone">رقم الهاتف <span style="color:var(--danger)">*</span></label>
+          <input type="tel" id="customerPhone" inputmode="numeric" placeholder="07XXXXXXXXX" required maxlength="11">
+          <div class="error-text" id="phoneError">رقم الهاتف غير صالح. يجب أن يتكون من 11 رقماً ويبدأ بـ 077 أو 078 أو 079 أو 075</div>
+        </div>
+
+        <div class="form-group">
+          <label for="customerName">الاسم <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="customerName" placeholder="اسمك" required>
+          <div class="error-text" id="nameError">الاسم مطلوب</div>
+        </div>
+
+        <!-- Order Summary in Checkout -->
+        <div id="checkoutSummary" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);"></div>
+
+        <button type="submit" class="checkout-btn" id="submitOrder">تأكيد الطلب</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ TRACKING SCREEN ═══ -->
+  <div class="screen" id="trackingScreen">
+    <div class="tracking-view">
+      <div class="success-icon">
+        <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+          <circle cx="36" cy="36" r="34" stroke="#3CA043" stroke-width="3" fill="#E8F5E9"/>
+          <path d="M22 36L32 46L50 26" stroke="#3CA043" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+      </div>
+      <h2>تم إرسال طلبك بنجاح!</h2>
+      <p class="order-id" id="trackingOrderId"></p>
+
+      <div class="timeline" id="orderTimeline">
+        <div class="timeline-step active" data-step="pending">
+          <div class="step-indicator">
+            <div class="step-dot">1</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h4>قيد الانتظار</h4>
+            <p>تم استلام طلبك</p>
+          </div>
+        </div>
+        <div class="timeline-step" data-step="cooking">
+          <div class="step-indicator">
+            <div class="step-dot">2</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h4>جاري التجهيز</h4>
+            <p>يتم تجهيز طلبك الآن</p>
+          </div>
+        </div>
+        <div class="timeline-step" data-step="delivery">
+          <div class="step-indicator">
+            <div class="step-dot">3</div>
+          </div>
+          <div class="step-content">
+            <h4>في الطريق</h4>
+            <p>طلبك في الطريق إليك</p>
+          </div>
+        </div>
+      </div>
+
+      <button class="back-btn" id="trackingBackToMenu">→ تصفح القائمة</button>
+
+      <p class="order-done-msg" id="orderDoneMsg" style="display:none; color:#27AE60; font-size:15px; font-weight:700; margin-top:24px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#27AE60" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-left:4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> تم تسليم طلبك بنجاح!</p>
+
+      <!-- Order Cancelled Message -->
+      <div class="order-cancelled-msg" id="orderCancelledMsg" style="display:none;">
+        <div class="cancelled-icon">
+          <svg width="64" height="64" viewBox="0 0 72 72" fill="none">
+            <circle cx="36" cy="36" r="34" stroke="#E74C3C" stroke-width="3" fill="#FDEDED"/>
+            <line x1="24" y1="24" x2="48" y2="48" stroke="#E74C3C" stroke-width="4" stroke-linecap="round"/>
+            <line x1="48" y1="24" x2="24" y2="48" stroke="#E74C3C" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3 style="color:#E74C3C; font-size:18px; font-weight:700; margin-top:12px;">تم إلغاء طلبك</h3>
+        <p style="color:var(--text-muted); font-size:13px; margin-top:4px;">تم رفض طلبك من قبل المتجر</p>
+        <div class="cancel-note-box" id="cancelNote" style="display:none;"></div>
+      </div>
+
+      <button class="checkout-btn" id="newOrderBtn" style="display:none; margin-top:12px; max-width:300px; margin-left:auto; margin-right:auto;">
+        طلب جديد
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ ALL SECTIONS SCREEN ═══ -->
+  <div class="screen" id="sectionsScreen">
+    <div class="sections-view">
+      <button class="back-btn" id="sectionsBack">→ العودة للقائمة</button>
+      <h2 class="sections-page-title">كل الأقسام</h2>
+      <div class="sections-grid" id="sectionsGrid"></div>
+    </div>
+  </div>
+
+  <!-- ═══ SINGLE CATEGORY SCREEN ═══ -->
+  <div class="screen" id="categoryScreen">
+    <div class="category-view">
+      <button class="back-btn" id="categoryBack">→ العودة</button>
+      <h2 class="section-title"><span class="emoji" id="categoryPageIcon"></span><span id="categoryPageTitle"></span></h2>
+      <div class="menu-grid" id="categoryGrid"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ ITEM DETAIL MODAL ═══ -->
+<div class="modal-overlay" id="itemModal">
+  <div class="modal-sheet" id="modalSheet">
+    <div class="modal-handle"></div>
+    <div id="modalImageContainer"></div>
+    <div class="modal-body">
+      <h2 id="modalItemName"></h2>
+      <p class="modal-desc" id="modalItemDesc"></p>
+      <div class="modal-price" id="modalItemPrice"></div>
+
+      <div class="addons-section" id="addonsSection">
+        <h4>إضافات</h4>
+        <div id="addonsList"></div>
+      </div>
+
+      <div class="notes-section">
+        <h4>ملاحظات على المنتج</h4>
+        <textarea id="modalNotes" placeholder="مثال: النوع أو الحجم المفضّل، أي ملاحظة للطلب..."></textarea>
+      </div>
+
+      <div class="qty-row">
+        <span style="font-weight:600">الكمية</span>
+        <div class="qty-controls">
+          <button type="button" class="qty-btn" id="qtyMinus">−</button>
+          <span class="qty-value" id="qtyValue">1</span>
+          <button type="button" class="qty-btn" id="qtyPlus">+</button>
+        </div>
+      </div>
+
+      <button type="button" class="modal-add-btn" id="modalAddToCart">
+        <span>أضف إلى السلة</span>
+        <span id="modalTotalPrice"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CART DRAWER ═══ -->
+<div class="cart-overlay" id="cartOverlay"></div>
+<div class="cart-drawer" id="cartDrawer">
+  <div class="cart-header">
+    <h2><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> سلة الطلبات</h2>
+    <button class="cart-close" id="cartClose">✕</button>
+  </div>
+  <div class="cart-body" id="cartBody"></div>
+  <div class="cart-footer" id="cartFooter" style="display:none">
+    <div class="promo-row">
+      <input type="text" id="promoInput" placeholder="كود الخصم">
+      <button type="button" id="promoApply">تطبيق</button>
+    </div>
+    <div class="promo-msg" id="promoMsg"></div>
+    <div id="cartSummaryRows"></div>
+    <button type="button" class="checkout-btn" id="goCheckout" disabled>المتابعة للدفع</button>
+    <div class="min-order-msg" id="minOrderMsg"></div>
+  </div>
+</div>
+
+<!-- ═══ FLOATING CART BUTTON ═══ -->
+<button class="floating-cart" id="floatingCart">
+  <span><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg> عرض السلة</span>
+  <span id="floatingCartTotal"></span>
+  <span class="cart-badge" id="floatingCartBadge">0</span>
+</button>
+
+<!-- ═══ FLOATING ORDER STATUS CARD ═══ -->
+<div class="floating-order-card" id="floatingOrderCard" style="display:none">
+  <div class="foc-dot"></div>
+  <div class="foc-info">
+    <span class="foc-title">طلبك الحالي</span>
+    <span class="foc-status" id="focStatus">قيد الانتظار</span>
+  </div>
+  <span class="foc-id" id="focOrderId"></span>
+  <button class="foc-close-btn" id="focCloseBtn" aria-label="إغلاق">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <svg class="foc-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+</div>
+
+<!-- ═══ AUTH MODAL (login / register / reset) ═══ -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-modal" id="authModal">
+    <button class="auth-close" id="authClose" aria-label="إغلاق">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+
+    <div class="auth-brand">
+      <img src="assets/kafeel_logo.png" alt="الكفيل" class="auth-logo">
+    </div>
+
+    <div class="auth-tabs" id="authTabs">
+      <button type="button" class="auth-tab active" data-auth-tab="login">تسجيل الدخول</button>
+      <button type="button" class="auth-tab" data-auth-tab="register">حساب جديد</button>
+      <span class="auth-tab-ind" id="authTabInd"></span>
+    </div>
+
+    <!-- LOGIN -->
+    <form class="auth-form active" id="custLoginForm" data-auth-view="login" autocomplete="off" novalidate>
+      <div class="auth-field">
+        <label for="loginIdentifier">اسم المستخدم أو رقم الهاتف</label>
+        <input type="text" id="loginIdentifier" autocomplete="username" required>
+      </div>
+      <div class="auth-field">
+        <label for="loginPassword">كلمة المرور</label>
+        <div class="auth-pass-wrap">
+          <input type="password" id="loginPassword" autocomplete="current-password" required>
+          <button type="button" class="auth-pass-toggle" data-target="loginPassword" aria-label="إظهار">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <button type="button" class="auth-link" id="gotoReset">نسيت كلمة المرور؟</button>
+      <div class="auth-error" id="loginErr"></div>
+      <button type="submit" class="auth-submit" id="loginSubmit">دخول</button>
+    </form>
+
+    <!-- REGISTER -->
+    <form class="auth-form" id="custRegisterForm" data-auth-view="register" autocomplete="off" novalidate>
+      <div class="auth-field">
+        <label for="regUsername">اسم المستخدم</label>
+        <input type="text" id="regUsername" autocomplete="off" required>
+      </div>
+      <div class="auth-field">
+        <label for="regPhone">رقم الهاتف</label>
+        <div class="auth-phone">
+          <span class="auth-phone-cc">+964</span>
+          <input type="tel" id="regPhone" inputmode="numeric" placeholder="7XX XXX XXXX" required>
+        </div>
+      </div>
+      <div class="auth-field">
+        <label for="regPassword">كلمة المرور</label>
+        <div class="auth-pass-wrap">
+          <input type="password" id="regPassword" autocomplete="new-password" required>
+          <button type="button" class="auth-pass-toggle" data-target="regPassword" aria-label="إظهار">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <span class="auth-hint">6 أحرف على الأقل</span>
+      </div>
+      <div class="auth-error" id="regErr"></div>
+      <button type="submit" class="auth-submit" id="regSubmit">إنشاء الحساب</button>
+    </form>
+
+    <!-- RESET -->
+    <form class="auth-form" id="custResetForm" data-auth-view="reset" autocomplete="off" novalidate>
+      <p class="auth-reset-title">استعادة كلمة المرور</p>
+      <div class="auth-field">
+        <label for="resetPhone">رقم الهاتف المسجّل</label>
+        <div class="auth-phone">
+          <span class="auth-phone-cc">+964</span>
+          <input type="tel" id="resetPhone" inputmode="numeric" placeholder="7XX XXX XXXX" required>
+        </div>
+      </div>
+      <div class="auth-field">
+        <label for="resetNewPassword">كلمة المرور الجديدة</label>
+        <input type="password" id="resetNewPassword" autocomplete="new-password" required>
+      </div>
+      <div class="auth-note">سيصلك رمز تحقق عبر واتساب لتأكيد العملية (قريباً).</div>
+      <div class="auth-error" id="resetErr"></div>
+      <button type="submit" class="auth-submit" id="resetSubmit">تحديث كلمة المرور</button>
+      <button type="button" class="auth-link" id="backToLogin">← العودة لتسجيل الدخول</button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ Supabase SDK ═══ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<!-- ═══ Firebase SDK (Push Notifications) ═══ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+
+<script src="env.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+
+<!-- ═══ FULL-SCREEN MOBILE INSTALL OVERLAY ═══ -->
+<div class="pwa-gate-overlay" id="pwaGateOverlay">
+  <div class="pwa-gate-content">
+    <img src="assets/kageel_bg_removed.png" alt="الكفيل" class="pwa-gate-logo">
+    <h2 class="pwa-gate-title">ماركت الكفيل</h2>
+    <p class="pwa-gate-subtitle">ثبّت التطبيق للحصول على أفضل تجربة</p>
+
+    <div class="pwa-gate-features">
+      <div class="pwa-gate-feature">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        <span>وصول فوري بدون متصفح</span>
+      </div>
+      <div class="pwa-gate-feature">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span>إشعارات فورية لحالة طلبك</span>
+      </div>
+      <div class="pwa-gate-feature">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        <span>تجربة تطبيق كاملة على هاتفك</span>
+      </div>
+    </div>
+
+    <button class="pwa-gate-install-btn" id="pwaGateInstallBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      تثبيت التطبيق
+    </button>
+
+    <!-- iOS instructions (hidden by default, shown on iOS) -->
+    <div class="pwa-gate-ios" id="pwaGateIOS" style="display:none;">
+      <p class="pwa-gate-ios-title">لتثبيت التطبيق:</p>
+      <div class="pwa-gate-ios-steps">
+        <div class="pwa-gate-ios-step">
+          <span class="step-num">١</span>
+          <span>اضغط على <svg style="display:inline-block;vertical-align:middle;margin:0 2px;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> في شريط Safari</span>
+        </div>
+        <div class="pwa-gate-ios-step">
+          <span class="step-num">٢</span>
+          <span>اختر <strong>"إضافة إلى الشاشة الرئيسية"</strong></span>
+        </div>
+        <div class="pwa-gate-ios-step">
+          <span class="step-num">٣</span>
+          <span>اضغط <strong>"إضافة"</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="pwa-gate-skip" id="pwaGateSkip">تصفح بدون تثبيت</button>
+  </div>
+</div>
+
+<script>
+// ─── Service Worker Registration ──────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(function(){});
+}
+
+// ─── PWA Install Gate (Mobile Only) ──────────────────────
+(function() {
+  var overlay = document.getElementById('pwaGateOverlay');
+  var installBtn = document.getElementById('pwaGateInstallBtn');
+  var skipBtn = document.getElementById('pwaGateSkip');
+  var iosInstructions = document.getElementById('pwaGateIOS');
+  var deferredPrompt = null;
+
+  // Already running as PWA — don't show
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+    overlay.style.display = 'none';
+    return;
+  }
+
+  // Desktop — don't show
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  var isAndroid = /Android/.test(navigator.userAgent);
+  var isMobile = isIOS || isAndroid || (window.innerWidth <= 768);
+  if (!isMobile) {
+    overlay.style.display = 'none';
+    return;
+  }
+
+  // Show the overlay
+  overlay.style.display = 'flex';
+
+  // iOS: show manual instructions, hide install button
+  if (isIOS) {
+    installBtn.style.display = 'none';
+    iosInstructions.style.display = 'block';
+  }
+
+  // Android: catch native install prompt
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+
+  installBtn.addEventListener('click', function() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function(choice) {
+        if (choice.outcome === 'accepted') {
+          overlay.style.display = 'none';
+        }
+        deferredPrompt = null;
+      });
+    }
+  });
+
+  skipBtn.addEventListener('click', function() {
+    overlay.classList.add('pwa-gate-hiding');
+    setTimeout(function() {
+      overlay.style.display = 'none';
+    }, 400);
+  });
+})();
+</script>
+</body>
+</html>
