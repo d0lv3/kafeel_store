@@ -1323,16 +1323,22 @@ async function sendPushNotification(orderId, status) {
 // ─── Utility Functions ───────────────────────────────────────
 
 // Serve a resized/compressed variant of a Supabase Storage image through the
-// render/image transform endpoint (enabled on this project). Cuts payload ~3×.
+// render/image transform endpoint (enabled on this project). Cuts payload ~10×.
+// `size` is the bounding box (max dimension). We pass width=height=size with
+// resize=contain so the image is scaled to FIT within the box preserving its
+// aspect ratio — no distortion, no crop, no padding (Supabase returns the
+// fitted dimensions). NOTE: a width-only transform DISTORTS on this project
+// (it keeps the original height), so both dims + resize=contain are required.
 // Non-Storage URLs (local assets, data URIs) and empty values pass through
 // unchanged, so it is always safe to wrap an <img src>.
-function optimizedImage(url, width, quality) {
+function optimizedImage(url, size, quality) {
   if (!url || typeof url !== 'string') return url || '';
   var marker = '/storage/v1/object/public/';
   if (url.indexOf(marker) === -1) return url;
   var base = url.replace(marker, '/storage/v1/render/image/public/');
+  var box = size || 400;
   var sep = base.indexOf('?') === -1 ? '?' : '&';
-  return base + sep + 'width=' + (width || 400) + '&quality=' + (quality || 70);
+  return base + sep + 'width=' + box + '&height=' + box + '&resize=contain&quality=' + (quality || 70);
 }
 
 function formatPrice(amount) {
