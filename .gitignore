@@ -24,6 +24,7 @@ assets/products/
 .vscode/
 .idea/
 .vercel/
+supabase/.temp/
 node_modules/
 *.log
 .DS_Store
@@ -37,3 +38,6 @@ cleanup-sections.py
 tmp/
 temp/
 *.tmp
+
+.vercel
+.env*.local
