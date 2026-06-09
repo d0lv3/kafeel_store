@@ -115,7 +115,6 @@ INSERT INTO categories (name, image, sort_order) VALUES
   ('قسم المياه', 'assets/categories/cat_28.jpg', 30),
   ('قسم الورقيات', 'assets/categories/cat_16.jpg', 31),
   ('قسم حليب ومستلزمات الاطفال', 'assets/categories/cat_13.jpg', 32),
-  ('قسم مواد خالية من الغلوتين', 'assets/categories/cat_34.jpg', 33),
   ('كيك و معجنات', 'assets/categories/cat_26.jpg', 34),
   ('مخبوزات', 'assets/categories/cat_36.jpg', 35),
   ('مستلزمات اعياد ميلاد ومناسبات', 'assets/categories/cat_38.jpg', 36),
