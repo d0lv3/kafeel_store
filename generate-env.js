@@ -1,19 +1,23 @@
 // ════════════════════════════════════════════════════════════════
-// generate-env.js — writes env.js at BUILD TIME from environment vars.
+// generate-env.js — writes env.js AND sw-config.js at BUILD TIME.
 //
-// Used by Vercel (see vercel.json `buildCommand`) so the Supabase config
-// reaches the deployed site WITHOUT committing it to this public repo.
+// Used by Vercel (see vercel.json `buildCommand`) so credentials reach
+// the deployed site WITHOUT being committed to this public repo.
+//
 // Set these in Vercel → Project → Settings → Environment Variables:
 //     SUPABASE_URL          = https://xxxx.supabase.co
 //     SUPABASE_ANON_KEY     = eyJ...
-// Optional (push notifications):
-//     FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID,
-//     FIREBASE_STORAGE_BUCKET, FIREBASE_SENDER_ID, FIREBASE_APP_ID,
-//     FCM_VAPID_KEY
+//     FIREBASE_API_KEY      = AIza...
+//     FIREBASE_AUTH_DOMAIN  = kafeel-market.firebaseapp.com
+//     FIREBASE_PROJECT_ID   = kafeel-market
+//     FIREBASE_STORAGE_BUCKET = kafeel-market.firebasestorage.app
+//     FIREBASE_SENDER_ID    = 380579163487
+//     FIREBASE_APP_ID       = 1:380579163487:web:...
+//     FCM_VAPID_KEY         = BM-...
 //
-// Locally you don't run this — you keep a hand-written env.js (gitignored).
-// As a safeguard, if no SUPABASE_URL is set and an env.js already exists,
-// this script leaves it untouched (so it won't wipe your local config).
+// Locally you don't run this — keep hand-written env.js + sw-config.js
+// (both gitignored). As a safeguard, if no SUPABASE_URL is set and an
+// env.js already exists, this script leaves both files untouched.
 // ════════════════════════════════════════════════════════════════
 const fs = require('fs');
 
@@ -53,4 +57,18 @@ if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
                'the deployed site will use local fallback data (no live backend).');
 } else {
   console.log('[generate-env] Wrote env.js with Supabase config from environment.');
+}
+
+// Also write sw-config.js — the service worker cannot read window.KAFEEL_ENV,
+// so it gets the Firebase config via importScripts('sw-config.js') instead.
+// sw-config.js is gitignored; it is generated here at build time alongside env.js.
+const swOut =
+  '// Generated at build time from environment variables. Do not edit.\n' +
+  'self.KAFEEL_FIREBASE_CONFIG = ' + JSON.stringify(env.FIREBASE_CONFIG || null) + ';\n' +
+  'self.KAFEEL_VAPID_KEY = ' + JSON.stringify(env.FCM_VAPID_KEY || '') + ';\n';
+fs.writeFileSync('sw-config.js', swOut);
+if (env.FIREBASE_CONFIG) {
+  console.log('[generate-env] Wrote sw-config.js with Firebase config (push enabled).');
+} else {
+  console.warn('[generate-env] No Firebase config — push notifications will be disabled.');
 }

@@ -1,10 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Set these to the domain(s) where Kafeel Market is hosted.
 const ALLOWED_ORIGINS = [
-  "https://YOUR_DOMAIN",
-  "https://www.YOUR_DOMAIN",
-  "https://YOUR_PROJECT.vercel.app",
+  "https://kafeel-store.vercel.app",
+  "http://localhost:8080",
+  "http://localhost:3000",
 ];
 
 function getCorsHeaders(req: Request) {

@@ -1,5 +1,6 @@
 # ─── Secrets / local backend config (NEVER commit) ───────────
 env.js
+sw-config.js
 .env
 .env.*
 *.key
