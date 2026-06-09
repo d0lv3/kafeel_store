@@ -444,7 +444,10 @@
     document.body.style.overflow = '';
     currentItem = null;
     if (!fromPopstate && historyStack[historyStack.length - 1] === 'itemModal') {
-      historyStack.pop();
+      // Only step back one entry: history.back() triggers popstate, whose
+      // handler pops the stack and finalizes the close. Popping here too
+      // would remove the underlying layer (e.g. the section), kicking the
+      // user back to the main menu instead of the section they came from.
       history.back();
     }
   }
@@ -545,7 +548,8 @@
     if (cart.length > 0) floatingCart.style.display = 'flex';
     document.body.style.overflow = '';
     if (!fromPopstate && historyStack[historyStack.length - 1] === 'cartDrawer') {
-      historyStack.pop();
+      // popstate handler does the single authoritative pop + close; popping
+      // here too would unwind the underlying section back to the main menu.
       history.back();
     }
   }
@@ -1050,7 +1054,8 @@
     document.body.style.overflow = '';
     clearAuthErrors();
     if (!fromPopstate && historyStack[historyStack.length - 1] === 'auth') {
-      historyStack.pop();
+      // popstate handler does the single authoritative pop + close; popping
+      // here too would unwind the underlying section back to the main menu.
       history.back();
     }
   }
