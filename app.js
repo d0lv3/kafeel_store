@@ -123,6 +123,42 @@
     container.querySelectorAll('img.item-img, img.cat-card-img').forEach(hydrateImg);
   }
 
+  // ─── Whole-page reveal ─────────────────────────────────────
+  // Rather than letting each image pop in on its own, keep the loading
+  // screen up until the homepage content AND all of its images have
+  // finished loading, then reveal everything at once.
+  let _revealed = false;
+  function revealApp() {
+    if (_revealed) return;
+    _revealed = true;
+    const loader = document.getElementById('loadingScreen');
+    if (loader) loader.classList.add('hidden');
+  }
+  function revealWhenImagesReady(maxWaitMs) {
+    if (_revealed) return;
+    const scopes = [
+      (typeof categoriesScroll !== 'undefined') ? categoriesScroll : null,
+      document.getElementById('offersContainer'),
+      (typeof menuContent !== 'undefined') ? menuContent : null,
+    ];
+    const pending = [];
+    scopes.forEach(s => {
+      if (!s) return;
+      s.querySelectorAll('img').forEach(im => {
+        if (!(im.complete && im.naturalWidth > 0)) pending.push(im);
+      });
+    });
+    if (!pending.length) { revealApp(); return; }
+    let remaining = pending.length;
+    const done = () => { if (--remaining <= 0) revealApp(); };
+    pending.forEach(im => {
+      im.addEventListener('load', done, { once: true });
+      im.addEventListener('error', done, { once: true });
+    });
+    // Safety net: never let a slow/broken image keep the page hidden.
+    setTimeout(revealApp, maxWaitMs || 9000);
+  }
+
   function wireCategoryCards(container) {
     container.querySelectorAll('.cat-card').forEach(card => {
       card.addEventListener('click', () => openCategoryPage(card.dataset.cat));
@@ -306,9 +342,8 @@
     }
 
     await loadAndRenderOffers();
-
-    const loader = document.getElementById('loadingScreen');
-    if (loader) loader.classList.add('hidden');
+    // NOTE: the loading screen is hidden by the whole-page reveal in init()
+    // (revealWhenImagesReady), once sections + menu + images are all ready.
   }
 
   function renderItemCard(item) {
@@ -1120,19 +1155,23 @@
   async function init() {
     renderCategories();
     wireAuth();
-    loadCategories();
     subscribeToCategories(loadCategories);
 
+    // Render cached content instantly, but keep it behind the loading
+    // screen — the whole page is revealed at once only when ready.
     if (_menuCache && _menuCache.length) {
       menuData = _menuCache;
       renderMenuFromCache();
-      const loader = document.getElementById('loadingScreen');
-      if (loader) loader.classList.add('hidden');
     }
 
     startMenuRealtime();
 
-    loadAndRenderMenu();
+    // Wait for the first real data (sections + menu + offers) to render,
+    // then reveal the page once all of its images have finished loading.
+    Promise.allSettled([loadCategories(), loadAndRenderMenu()])
+      .then(() => revealWhenImagesReady());
+    // Global safety: reveal regardless after a few seconds (slow network).
+    setTimeout(revealApp, 12000);
 
     initFirebaseMessaging().catch(() => {});
 
