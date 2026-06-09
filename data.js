@@ -845,6 +845,14 @@ async function clearCompletedOrders() {
   return { success: !error };
 }
 
+async function deleteOrder(orderId) {
+  const { error } = await _supabase
+    .from('orders')
+    .delete()
+    .eq('id', orderId);
+  return { success: !error };
+}
+
 // ─── Promo Code Functions ────────────────────────────────────
 
 async function validatePromoCode(code) {

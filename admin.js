@@ -260,20 +260,44 @@
       const time = getTimeString(order.timestamp);
       const date = getDateString(order.timestamp);
       const itemsSummary = order.items.map(i => `${escapeHtml(i.name)} ×${parseInt(i.qty) || 0}`).join('، ');
+      const isDone = order.status === 'done';
+      const statusBadge = isDone
+        ? `<span class="cor-status cor-status-done">مكتمل</span>`
+        : `<span class="cor-status cor-status-cancelled">ملغي</span>`;
       return `
-        <div class="completed-order-row">
+        <div class="completed-order-row" data-order-id="${escapeHtml(String(order.id))}">
           <div class="cor-header">
-            <span class="cor-id">${escapeHtml(order.id)}</span>
-            <span class="cor-time">${time} · ${date}</span>
+            <div class="cor-header-start">
+              <span class="cor-id">${escapeHtml(String(order.id))}</span>
+              ${statusBadge}
+            </div>
+            <div class="cor-header-end">
+              <span class="cor-time">${time} · ${date}</span>
+              <button class="cor-delete-btn" data-order-id="${escapeHtml(String(order.id))}" title="حذف الطلب">${IC.trash}</button>
+            </div>
+          </div>
+          <div class="cor-customer">
+            ${order.name ? `<span>${IC.user} ${escapeHtml(order.name)}</span>` : ''}
+            <span>${IC.phone} ${escapeHtml(order.phone)}</span>
+            <span>${IC.pin} ${escapeHtml(order.address)}</span>
           </div>
           <div class="cor-items">${itemsSummary}</div>
           <div class="cor-footer">
-            <span>${escapeHtml(order.name || order.phone)}</span>
             <span class="cor-total">${formatPrice(order.total)}</span>
           </div>
         </div>
       `;
     }).join('');
+
+    // Wire per-row delete buttons
+    list.querySelectorAll('.cor-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('هل تريد حذف هذا الطلب؟ لا يمكن التراجع.')) return;
+        btn.disabled = true;
+        await deleteOrder(btn.dataset.orderId);
+        await renderCompletedOrders();
+      });
+    });
   }
 
   // Reset completed orders
