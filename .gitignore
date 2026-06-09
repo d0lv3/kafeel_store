@@ -29,6 +29,9 @@ node_modules/
 Thumbs.db
 desktop.ini
 
+# ─── One-off ops scripts (contain no secrets but not repo material) ─
+cleanup-sections.py
+
 # ─── Scratch / temp ──────────────────────────────────────────
 tmp/
 temp/
