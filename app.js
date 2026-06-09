@@ -20,6 +20,7 @@
   let cancelledTimer = null;
   let currentCustomer = null; // { username, phone } when logged in
   let pendingCheckout = false; // user tried to checkout while logged out
+  let searchQuery = '';        // active product-search term ('' = not searching)
 
   // ─── History / Back-Button Stack ────────────────────────────
   const historyStack = [];
@@ -104,7 +105,7 @@
   // ─── Render Categories (الأقسام cards) ──────────────────────
   function categoryCardHtml(c) {
     const media = c.image
-      ? `<img src="${escapeHtml(c.image)}" alt="${escapeHtml(c.name)}" class="cat-card-img" loading="lazy">`
+      ? `<img src="${escapeHtml(optimizedImage(c.image, 200))}" alt="${escapeHtml(c.name)}" class="cat-card-img" loading="lazy" decoding="async">`
       : `<div class="cat-card-ph">${PH_ICON}</div>`;
     return `
       <button type="button" class="cat-card" data-cat="${escapeHtml(c.name)}">
@@ -251,6 +252,8 @@
     if (currentCategory && document.getElementById('categoryScreen').classList.contains('active')) {
       renderCategoryPage(currentCategory);
     }
+    // Keep an active search in sync with refreshed menu data.
+    if (searchQuery) runSearch(searchQuery);
   }
 
   // SVG icons replacing the 🔥 / ⭐ emojis in the home-row titles
@@ -282,6 +285,69 @@
 
     menuContent.innerHTML = html;
     wireItemCards(menuContent);
+  }
+
+  // ─── Product Search ─────────────────────────────────────────
+  // Forgiving Arabic matching: fold alef/ya/teh-marbuta variants and strip
+  // tashkeel so "تفاح" matches "التفاح", "مكثف" matches "مكثّف", etc.
+  function normalizeArabic(s) {
+    return String(s || '')
+      .replace(/[ً-ْ]/g, '')   // harakat / tashkeel
+      .replace(/[إأآا]/g, 'ا')
+      .replace(/ى/g, 'ي')
+      .replace(/ؤ/g, 'و')
+      .replace(/ئ/g, 'ي')
+      .replace(/ة/g, 'ه')
+      .replace(/ـ/g, '')            // tatweel
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  function runSearch(q) {
+    searchQuery = (q || '').trim();
+    const resultsEl = document.getElementById('searchResults');
+    const clearBtn = document.getElementById('searchClear');
+    if (!resultsEl) return;
+    const homeEls = [
+      document.querySelector('.categories-section'),
+      document.getElementById('offersContainer'),
+      menuContent,
+      document.querySelector('.app-footer'),
+    ];
+
+    if (!searchQuery) {
+      resultsEl.style.display = 'none';
+      resultsEl.innerHTML = '';
+      if (clearBtn) clearBtn.style.display = 'none';
+      homeEls.forEach(el => { if (el) el.style.display = ''; });
+      return;
+    }
+
+    if (clearBtn) clearBtn.style.display = 'flex';
+    homeEls.forEach(el => { if (el) el.style.display = 'none'; });
+    resultsEl.style.display = 'block';
+
+    const norm = normalizeArabic(searchQuery);
+    const matches = menuData.filter(i =>
+      normalizeArabic(i.name).indexOf(norm) !== -1 ||
+      normalizeArabic(i.category).indexOf(norm) !== -1
+    );
+
+    if (!matches.length) {
+      resultsEl.innerHTML = '<p class="home-empty">لا توجد نتائج للبحث «' + escapeHtml(searchQuery) + '»</p>';
+      return;
+    }
+    resultsEl.innerHTML =
+      '<div class="search-results-head">نتائج البحث (' + matches.length + ')</div>' +
+      '<div class="menu-grid">' + matches.map(renderItemCard).join('') + '</div>';
+    wireItemCards(resultsEl);
+  }
+
+  function clearSearch() {
+    const input = document.getElementById('productSearch');
+    if (input) input.value = '';
+    runSearch('');
   }
 
   // Format a product name: drop the "*" separator and style the trailing
@@ -359,7 +425,7 @@
 
   function renderItemCard(item) {
     const imgHtml = item.image
-      ? `<div class="item-img-wrap"><img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="item-img" loading="lazy"></div>`
+      ? `<div class="item-img-wrap"><img src="${escapeHtml(optimizedImage(item.image, 360))}" alt="${escapeHtml(item.name)}" class="item-img" loading="lazy" decoding="async"></div>`
       : `<div class="item-placeholder">${PH_ICON}</div>`;
 
     const onOffer = isOnOffer(item);
@@ -370,6 +436,9 @@
          </div>`
       : `<div class="item-price">${formatPrice(item.price)}</div>`;
 
+    // Low-stock nudge for tracked items running low (but still available).
+    const lowStock = item.inStock && item.stockQty !== null && item.stockQty > 0 && item.stockQty <= 5;
+
     return `
       <div class="item-card ${item.inStock ? '' : 'out-of-stock'} ${onOffer ? 'has-offer' : ''}" data-id="${escapeHtml(item.id)}">
         ${imgHtml}
@@ -377,6 +446,7 @@
         <div class="item-info">
           <h3>${formatProductName(item.name)}</h3>
           ${priceHtml}
+          ${lowStock ? `<span class="low-stock-badge">باقي ${item.stockQty}</span>` : ''}
         </div>
         ${!item.inStock ? '<span class="stock-badge">نفد</span>' : ''}
         ${item.inStock ? '<button class="add-btn" aria-label="إضافة">+</button>' : ''}
@@ -399,7 +469,7 @@
 
     const imgContainer = $('#modalImageContainer');
     if (item.image) {
-      imgContainer.innerHTML = `<div class="modal-img-wrap"><img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="modal-img"></div>`;
+      imgContainer.innerHTML = `<div class="modal-img-wrap"><img src="${escapeHtml(optimizedImage(item.image, 600))}" alt="${escapeHtml(item.name)}" class="modal-img" decoding="async"></div>`;
       const mi = imgContainer.querySelector('img.modal-img');
       if (mi) hydrateImg(mi);
     } else {
@@ -701,6 +771,7 @@
     const phone = $('#customerPhone').value.trim();
     const address = $('#customerAddress').value.trim();
     const name = $('#customerName').value.trim();
+    const deliveryNote = $('#deliveryNote') ? $('#deliveryNote').value.trim() : '';
 
     if (!validatePhone(phone)) {
       $('#customerPhone').classList.add('error');
@@ -751,6 +822,7 @@
       address: address,
       items: orderItems,
       promoCode: appliedPromo ? appliedPromo.code : null,
+      deliveryNote: deliveryNote,
     });
 
     if (!result.success) {
@@ -786,6 +858,7 @@
     localStorage.setItem('kafeel_customer', JSON.stringify({ phone, address, name }));
     cart = [];
     appliedPromo = null;
+    clearSearch();
     updateCartUI();
 
     submitBtn.disabled = false;
@@ -1287,6 +1360,19 @@
       }
       showScreen('#menuScreen', true);
     });
+
+    // ─── Product search ─────────────────────────────────────
+    const searchInput = $('#productSearch');
+    if (searchInput) {
+      let searchDebounce = null;
+      searchInput.addEventListener('input', () => {
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(() => runSearch(searchInput.value), 140);
+      });
+      searchInput.addEventListener('search', () => runSearch(searchInput.value));
+    }
+    const searchClearBtn = $('#searchClear');
+    if (searchClearBtn) searchClearBtn.addEventListener('click', clearSearch);
 
     // ─── Categories "المزيد" → all-sections page ────────────
     $('#categoriesMore').addEventListener('click', () => {

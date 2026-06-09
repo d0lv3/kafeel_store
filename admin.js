@@ -57,8 +57,10 @@
       $('#completedSection').classList.toggle('active', target === 'completed');
       $('#menuSection').classList.toggle('active', target === 'menu');
       $('#sectionsAdmin').classList.toggle('active', target === 'sections');
+      $('#promosAdmin').classList.toggle('active', target === 'promos');
       if (target === 'completed') renderCompletedOrders();
       if (target === 'sections') renderSectionsAdmin();
+      if (target === 'promos') renderPromosAdmin();
     });
   });
 
@@ -213,6 +215,7 @@
           <div class="order-field"><span class="field-label">${IC.phone} الهاتف:</span><span>${escapeHtml(order.phone)}</span></div>
           <div class="order-field"><span class="field-label">${IC.pin} العنوان:</span><span>${escapeHtml(order.address)}</span></div>
           ${order.name ? `<div class="order-field"><span class="field-label">${IC.user} الاسم:</span><span>${escapeHtml(order.name)}</span></div>` : ''}
+          ${order.deliveryNote ? `<div class="order-field order-note"><span class="field-label">${IC.note} ملاحظة:</span><span>${escapeHtml(order.deliveryNote)}</span></div>` : ''}
           ${itemsHtml}
         </div>
         <div class="order-card-total">
@@ -225,22 +228,64 @@
   }
 
   // ─── Completed Orders + Stats Dashboard ─────────────────────
-  async function renderCompletedOrders() {
-    const orders = await getCompletedOrders();
+  let _completedAll = [];          // all done+cancelled orders (fetched once)
+  let _completedShown = 20;        // pagination cursor
+  const COMPLETED_PAGE = 20;
+  const completedFilter = { search: '', range: 'all', from: '', to: '' };
 
-    const doneOrders = orders.filter(o => o.status === 'done');
+  // Fetch fresh, then render. Called on tab open, delete, reset, realtime.
+  async function renderCompletedOrders() {
+    _completedAll = await getCompletedOrders();
+    _completedShown = COMPLETED_PAGE;
+    applyCompletedRender();
+  }
+
+  // Resolve the active date range to {min, max} epoch ms (null = unbounded).
+  function completedDateBounds() {
+    const f = completedFilter;
+    const now = new Date();
+    if (f.range === 'today') {
+      return { min: new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), max: null };
+    }
+    if (f.range === '7')  return { min: Date.now() - 7 * 86400000, max: null };
+    if (f.range === '30') return { min: Date.now() - 30 * 86400000, max: null };
+    if (f.range === 'custom') {
+      return {
+        min: f.from ? new Date(f.from + 'T00:00:00').getTime() : null,
+        max: f.to ? new Date(f.to + 'T23:59:59').getTime() : null,
+      };
+    }
+    return { min: null, max: null };
+  }
+
+  function filterCompletedOrders(orders) {
+    const b = completedDateBounds();
+    const q = (completedFilter.search || '').toLowerCase().trim();
+    return orders.filter(o => {
+      if (b.min !== null && o.timestamp < b.min) return false;
+      if (b.max !== null && o.timestamp > b.max) return false;
+      if (q) {
+        const hay = ((o.id || '') + ' ' + (o.name || '') + ' ' + (o.phone || '')).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  // Recompute stats + list from the current filter (no refetch).
+  function applyCompletedRender() {
+    const filtered = filterCompletedOrders(_completedAll);
+
+    const doneOrders = filtered.filter(o => o.status === 'done');
     const totalOrders = doneOrders.length;
     const totalRevenue = doneOrders.reduce((sum, o) => sum + o.total, 0);
     const avgOrder = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
 
     const itemFreq = {};
-    doneOrders.forEach(o => {
-      o.items.forEach(item => {
-        itemFreq[item.name] = (itemFreq[item.name] || 0) + item.qty;
-      });
-    });
-    let topItem = '—';
-    let topCount = 0;
+    doneOrders.forEach(o => o.items.forEach(item => {
+      itemFreq[item.name] = (itemFreq[item.name] || 0) + item.qty;
+    }));
+    let topItem = '—', topCount = 0;
     Object.entries(itemFreq).forEach(([name, count]) => {
       if (count > topCount) { topItem = name; topCount = count; }
     });
@@ -251,45 +296,56 @@
     $('#statAvgOrder').textContent = formatPrice(avgOrder);
 
     const list = $('#completedOrdersList');
-    if (orders.length === 0) {
-      list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px 0;">لا توجد طلبات مكتملة بعد</p>';
+    const loadMore = $('#loadMoreBtn');
+    if (filtered.length === 0) {
+      const isFiltering = completedFilter.search || completedFilter.range !== 'all';
+      list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px 0;">' +
+        (isFiltering ? 'لا توجد طلبات مطابقة' : 'لا توجد طلبات مكتملة بعد') + '</p>';
+      if (loadMore) loadMore.style.display = 'none';
       return;
     }
 
-    list.innerHTML = orders.map(order => {
-      const time = getTimeString(order.timestamp);
-      const date = getDateString(order.timestamp);
-      const itemsSummary = order.items.map(i => `${escapeHtml(i.name)} ×${parseInt(i.qty) || 0}`).join('، ');
-      const isDone = order.status === 'done';
-      const statusBadge = isDone
-        ? `<span class="cor-status cor-status-done">مكتمل</span>`
-        : `<span class="cor-status cor-status-cancelled">ملغي</span>`;
-      return `
-        <div class="completed-order-row" data-order-id="${escapeHtml(String(order.id))}">
-          <div class="cor-header">
-            <div class="cor-header-start">
-              <span class="cor-id">${escapeHtml(String(order.id))}</span>
-              ${statusBadge}
-            </div>
-            <div class="cor-header-end">
-              <span class="cor-time">${time} · ${date}</span>
-              <button class="cor-delete-btn" data-order-id="${escapeHtml(String(order.id))}" title="حذف الطلب">${IC.trash}</button>
-            </div>
+    const visible = filtered.slice(0, _completedShown);
+    list.innerHTML = visible.map(renderCompletedRow).join('');
+    wireCompletedDeletes(list);
+    if (loadMore) loadMore.style.display = filtered.length > _completedShown ? 'block' : 'none';
+  }
+
+  function renderCompletedRow(order) {
+    const time = getTimeString(order.timestamp);
+    const date = getDateString(order.timestamp);
+    const itemsSummary = order.items.map(i => `${escapeHtml(i.name)} ×${parseInt(i.qty) || 0}`).join('، ');
+    const isDone = order.status === 'done';
+    const statusBadge = isDone
+      ? `<span class="cor-status cor-status-done">مكتمل</span>`
+      : `<span class="cor-status cor-status-cancelled">ملغي</span>`;
+    return `
+      <div class="completed-order-row" data-order-id="${escapeHtml(String(order.id))}">
+        <div class="cor-header">
+          <div class="cor-header-start">
+            <span class="cor-id">${escapeHtml(String(order.id))}</span>
+            ${statusBadge}
           </div>
-          <div class="cor-customer">
-            ${order.name ? `<span>${IC.user} ${escapeHtml(order.name)}</span>` : ''}
-            <span>${IC.phone} ${escapeHtml(order.phone)}</span>
-            <span>${IC.pin} ${escapeHtml(order.address)}</span>
-          </div>
-          <div class="cor-items">${itemsSummary}</div>
-          <div class="cor-footer">
-            <span class="cor-total">${formatPrice(order.total)}</span>
+          <div class="cor-header-end">
+            <span class="cor-time">${time} · ${date}</span>
+            <button class="cor-delete-btn" data-order-id="${escapeHtml(String(order.id))}" title="حذف الطلب">${IC.trash}</button>
           </div>
         </div>
-      `;
-    }).join('');
+        <div class="cor-customer">
+          ${order.name ? `<span>${IC.user} ${escapeHtml(order.name)}</span>` : ''}
+          <span>${IC.phone} ${escapeHtml(order.phone)}</span>
+          <span>${IC.pin} ${escapeHtml(order.address)}</span>
+        </div>
+        ${order.deliveryNote ? `<div class="cor-note">${IC.note} ${escapeHtml(order.deliveryNote)}</div>` : ''}
+        <div class="cor-items">${itemsSummary}</div>
+        <div class="cor-footer">
+          <span class="cor-total">${formatPrice(order.total)}</span>
+        </div>
+      </div>
+    `;
+  }
 
-    // Wire per-row delete buttons
+  function wireCompletedDeletes(list) {
     list.querySelectorAll('.cor-delete-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (!confirm('هل تريد حذف هذا الطلب؟ لا يمكن التراجع.')) return;
@@ -298,6 +354,36 @@
         await renderCompletedOrders();
       });
     });
+  }
+
+  // Export the currently-filtered completed orders to a CSV (Excel-friendly,
+  // UTF-8 BOM so Arabic renders correctly).
+  function exportCompletedCsv() {
+    const rows = filterCompletedOrders(_completedAll);
+    if (!rows.length) { alert('لا توجد طلبات للتصدير'); return; }
+    const headers = ['رقم الطلب', 'الحالة', 'التاريخ', 'الوقت', 'الاسم', 'الهاتف',
+      'العنوان', 'ملاحظة التوصيل', 'الأصناف', 'المجموع الفرعي', 'التوصيل', 'الخصم', 'كود الخصم', 'الإجمالي'];
+    const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const lines = [headers.map(esc).join(',')];
+    rows.forEach(o => {
+      const items = o.items.map(i => i.name + ' x' + i.qty).join(' | ');
+      lines.push([
+        o.id, o.status === 'done' ? 'مكتمل' : 'ملغي',
+        getDateString(o.timestamp), getTimeString(o.timestamp),
+        o.name || '', o.phone || '', o.address || '', o.deliveryNote || '',
+        items, o.subtotal, o.deliveryFee, o.discount, o.promoCode || '', o.total,
+      ].map(esc).join(','));
+    });
+    const csv = '﻿' + lines.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'kafeel-orders-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   // Reset completed orders
@@ -311,6 +397,50 @@
     btn.innerHTML = IC.trash + ' مسح الكل';
     await renderCompletedOrders();
   });
+
+  // ─── Completed-orders toolbar (search / date filter / export / paging) ──
+  (function wireCompletedToolbar() {
+    const searchEl = $('#completedSearch');
+    if (searchEl) {
+      let t = null;
+      searchEl.addEventListener('input', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          completedFilter.search = searchEl.value;
+          _completedShown = COMPLETED_PAGE;
+          applyCompletedRender();
+        }, 160);
+      });
+    }
+    $$('.date-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $$('.date-preset').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        completedFilter.range = btn.dataset.range;
+        completedFilter.from = '';
+        completedFilter.to = '';
+        if ($('#dateFrom')) $('#dateFrom').value = '';
+        if ($('#dateTo')) $('#dateTo').value = '';
+        _completedShown = COMPLETED_PAGE;
+        applyCompletedRender();
+      });
+    });
+    const onCustomDate = () => {
+      completedFilter.range = 'custom';
+      completedFilter.from = $('#dateFrom') ? $('#dateFrom').value : '';
+      completedFilter.to = $('#dateTo') ? $('#dateTo').value : '';
+      $$('.date-preset').forEach(b => b.classList.remove('active'));
+      _completedShown = COMPLETED_PAGE;
+      applyCompletedRender();
+    };
+    if ($('#dateFrom')) $('#dateFrom').addEventListener('change', onCustomDate);
+    if ($('#dateTo')) $('#dateTo').addEventListener('change', onCustomDate);
+    if ($('#loadMoreBtn')) $('#loadMoreBtn').addEventListener('click', () => {
+      _completedShown += COMPLETED_PAGE;
+      applyCompletedRender();
+    });
+    if ($('#exportCsvBtn')) $('#exportCsvBtn').addEventListener('click', exportCompletedCsv);
+  })();
 
   // ─── Render Menu Management ─────────────────────────────────
   let editingItemId = null;
@@ -351,6 +481,8 @@
                 <select class="edit-input edit-category">
                   ${order.map(cat => `<option value="${escapeHtml(cat)}" ${cat === item.category ? 'selected' : ''}>${escapeHtml(cat)}</option>`).join('')}
                 </select></div>
+              <div class="edit-field"><label>المخزون (فارغ = غير محدود)</label>
+                <input type="number" class="edit-input edit-stock" value="${item.stockQty !== null && item.stockQty !== undefined ? item.stockQty : ''}" min="0" placeholder="غير محدود"></div>
               <div class="edit-field">
                 <label>الصورة</label>
                 <label class="edit-photo-drop">
@@ -371,6 +503,7 @@
         <div class="menu-table-row" data-item-id="${item.id}">
           <div class="menu-row-main">
             <span class="item-name">${adminDisplayName(item.name)}</span>
+            ${item.stockQty !== null && item.stockQty !== undefined ? `<span class="row-stock ${item.stockQty <= 5 ? 'low' : ''}">مخزون: ${item.stockQty}</span>` : ''}
             <span class="item-price-cell">${item.offerPrice ? '<span class="row-old">' + formatPrice(item.price) + '</span> ' : ''}${formatPrice(item.offerPrice || item.price)}</span>
           </div>
           <div class="menu-row-controls">
@@ -515,6 +648,8 @@
         if (!newName || !newPrice) return;
         btn.disabled = true; btn.textContent = '...حفظ';
         const updates = { name: newName, price: newPrice, category: newCategory };
+        const stockRaw = row.querySelector('.edit-stock') ? row.querySelector('.edit-stock').value.trim() : '';
+        updates.stockQty = stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10) || 0);
         if (editPhotoFile) {
           const up = await uploadProductImage(editPhotoFile);
           if (up.success) { updates.image = up.url; }
@@ -547,6 +682,7 @@
       .map(c => `<option value="${c}">${c}</option>`).join('');
     $('#productName').value = '';
     $('#productPrice').value = '';
+    if ($('#productStock')) $('#productStock').value = '';
     productPhotoFile = null;
     $('#productPhoto').value = '';
     const prev = $('#productPhotoPreview');
@@ -602,7 +738,9 @@
       imageUrl = up.url;
     }
 
-    const res = await createMenuItem({ name, category, price, image: imageUrl });
+    const stockRaw = $('#productStock') ? $('#productStock').value.trim() : '';
+    const stockQty = stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10) || 0);
+    const res = await createMenuItem({ name, category, price, image: imageUrl, stockQty: stockQty });
     btn.disabled = false; btn.textContent = 'حفظ المنتج';
     if (!res.success) {
       err.textContent = 'فشل حفظ المنتج: ' + (res.error || ''); err.classList.add('visible');
@@ -987,6 +1125,81 @@
       });
     });
   }
+
+  // ─── Promo Codes Management ─────────────────────────────────
+  const promoOverlay = $('#promoOverlay');
+
+  async function renderPromosAdmin() {
+    const list = $('#promosListAdmin');
+    if (!list) return;
+    const promos = await getAllPromos();
+    if (!promos.length) {
+      list.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px 0;">لا توجد أكواد خصم. اضغط «إضافة كود».</p>';
+      return;
+    }
+    list.innerHTML = promos.map(p => `
+      <div class="promo-row ${p.active ? '' : 'inactive'}" data-id="${p.id}">
+        <div class="promo-row-info">
+          <span class="promo-code-label">${escapeHtml(p.code)}</span>
+          <span class="promo-value">${p.type === 'percent' ? p.value + '%' : formatPrice(p.value)} خصم</span>
+        </div>
+        <label class="toggle-switch" title="مفعّل">
+          <input type="checkbox" class="promo-toggle" ${p.active ? 'checked' : ''} data-id="${p.id}">
+          <span class="toggle-slider"></span>
+        </label>
+        <button class="remove-btn promo-del" data-id="${p.id}" title="حذف">${IC.trash}</button>
+      </div>`).join('');
+
+    list.querySelectorAll('.promo-toggle').forEach(t => t.addEventListener('change', async () => {
+      t.disabled = true;
+      await togglePromoActive(t.dataset.id, t.checked);
+      t.disabled = false;
+      await renderPromosAdmin();
+    }));
+    list.querySelectorAll('.promo-del').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('حذف هذا الكود نهائياً؟')) return;
+      b.disabled = true;
+      await deletePromo(b.dataset.id);
+      await renderPromosAdmin();
+    }));
+  }
+
+  function openPromoModal() {
+    $('#promoCode').value = '';
+    $('#promoType').value = 'percent';
+    $('#promoValue').value = '';
+    const err = $('#promoErr'); err.textContent = ''; err.classList.remove('visible');
+    promoOverlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePromoModal() {
+    promoOverlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  if ($('#addPromoBtn')) $('#addPromoBtn').addEventListener('click', openPromoModal);
+  if ($('#promoClose')) $('#promoClose').addEventListener('click', closePromoModal);
+  if (promoOverlay) promoOverlay.addEventListener('click', (e) => { if (e.target === promoOverlay) closePromoModal(); });
+
+  if ($('#promoSave')) $('#promoSave').addEventListener('click', async () => {
+    const err = $('#promoErr'); err.textContent = ''; err.classList.remove('visible');
+    const showErr = (m) => { err.textContent = m; err.classList.add('visible'); };
+    const code = $('#promoCode').value.trim().toUpperCase().replace(/\s+/g, '');
+    const type = $('#promoType').value;
+    const value = parseInt($('#promoValue').value, 10);
+    if (!code) return showErr('أدخل الكود');
+    if (!value || value <= 0) return showErr('أدخل قيمة صحيحة');
+    if (type === 'percent' && value > 100) return showErr('النسبة يجب أن تكون 100% أو أقل');
+    const btn = $('#promoSave'); btn.disabled = true; btn.textContent = '...جاري الحفظ';
+    const res = await createPromo(code, type, value);
+    btn.disabled = false; btn.textContent = 'حفظ الكود';
+    if (!res.success) {
+      const msg = (res.error && (res.error.message || res.error)) ? String(res.error.message || res.error) : '';
+      return showErr(/duplicate|unique/i.test(msg) ? 'هذا الكود موجود بالفعل' : 'فشل حفظ الكود');
+    }
+    closePromoModal();
+    await renderPromosAdmin();
+  });
 
   // Check session on load
   isAdminLoggedIn().then(loggedIn => {

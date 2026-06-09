@@ -456,6 +456,8 @@ function transformMenuItem(row) {
     isSpecial: row.is_special || false,
     salesCount: row.sales_count || 0,
     offerPrice: row.offer_price || null,
+    // null = stock not tracked (treated as unlimited); a number = enforced qty
+    stockQty: (row.stock_qty === null || row.stock_qty === undefined) ? null : row.stock_qty,
   };
 }
 
@@ -479,6 +481,8 @@ function transformOrder(row) {
     discount: row.discount,
     total: row.total,
     status: row.status,
+    deliveryNote: row.delivery_note || '',
+    promoCode: row.promo_code || '',
     timestamp: new Date(row.created_at).getTime(),
   };
 }
@@ -553,6 +557,17 @@ async function updateMenuItem(itemId, updates) {
   if (updates.image !== undefined) dbUpdates.image = updates.image;
   // offerPrice: a positive number sets the discount; null/0 clears it
   if (updates.offerPrice !== undefined) dbUpdates.offer_price = (updates.offerPrice && updates.offerPrice > 0) ? updates.offerPrice : null;
+  // stockQty: '' / null clears tracking (unlimited); a number enforces qty and
+  // restocks/sells out the in_stock flag to match.
+  if (updates.stockQty !== undefined) {
+    if (updates.stockQty === null || updates.stockQty === '') {
+      dbUpdates.stock_qty = null;
+    } else {
+      var q = Math.max(0, parseInt(updates.stockQty, 10) || 0);
+      dbUpdates.stock_qty = q;
+      dbUpdates.in_stock = q > 0;
+    }
+  }
 
   const { error } = await _supabase
     .from('menu_items')
@@ -560,8 +575,11 @@ async function updateMenuItem(itemId, updates) {
     .eq('id', itemId);
 
   if (!error) {
+    var normalized = Object.assign({}, updates);
+    if (dbUpdates.stock_qty !== undefined) normalized.stockQty = dbUpdates.stock_qty;
+    if (dbUpdates.in_stock !== undefined) normalized.inStock = dbUpdates.in_stock;
     _menuCache = _menuCache.map(function (item) {
-      if (item.id === itemId) return Object.assign({}, item, updates);
+      if (item.id === itemId) return Object.assign({}, item, normalized);
       return item;
     });
     saveMenuToStorage(_menuCache);
@@ -604,6 +622,8 @@ async function uploadProductImage(file) {
 // Create a new product. id is auto-generated; admin auth enforced by RLS.
 async function createMenuItem(item) {
   const id = 'p_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const hasQty = item.stockQty !== undefined && item.stockQty !== null && item.stockQty !== '';
+  const qty = hasQty ? Math.max(0, parseInt(item.stockQty, 10) || 0) : null;
   const row = {
     id: id,
     name: item.name,
@@ -611,10 +631,11 @@ async function createMenuItem(item) {
     category: item.category,
     price: item.price,
     image: item.image || '',
-    in_stock: true,
+    in_stock: hasQty ? qty > 0 : true,
     addons: [],
     is_special: false,
     sales_count: 0,
+    stock_qty: qty,
     sort_order: 9999,
   };
   const { error } = await _supabase.from('menu_items').insert(row);
@@ -740,6 +761,7 @@ async function saveOrder(orderData) {
       p_items: orderData.items,
       p_promo_code: orderData.promoCode || null,
       p_session_token: getCustomerToken(),
+      p_delivery_note: orderData.deliveryNote || null,
     });
 
     if (error) {
@@ -869,6 +891,49 @@ async function validatePromoCode(code) {
     console.warn('validatePromo failed:', err);
   }
   return null;
+}
+
+// ── Promo code management (admin) ──
+async function getAllPromos() {
+  try {
+    const { data, error } = await _supabase
+      .from('promo_codes')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error && data) {
+      return data.map(function (p) {
+        return { id: p.id, code: p.code, type: p.type, value: p.value, active: p.active, createdAt: p.created_at };
+      });
+    }
+  } catch (err) {
+    console.warn('getAllPromos failed:', err);
+  }
+  return [];
+}
+
+async function createPromo(code, type, value) {
+  const { data, error } = await _supabase
+    .from('promo_codes')
+    .insert({ code: code, type: type, value: value, active: true })
+    .select()
+    .single();
+  return { success: !error, data: data, error: error };
+}
+
+async function togglePromoActive(id, active) {
+  const { error } = await _supabase
+    .from('promo_codes')
+    .update({ active: active })
+    .eq('id', id);
+  return { success: !error };
+}
+
+async function deletePromo(id) {
+  const { error } = await _supabase
+    .from('promo_codes')
+    .delete()
+    .eq('id', id);
+  return { success: !error };
 }
 
 // ─── Restaurant Status ──────────────────────────────────────
@@ -1044,28 +1109,52 @@ let _orderChannel = null;
 let _ordersChannel = null;
 let _menuChannel = null;
 
+let _orderPollTimer = null;
+
 function subscribeToOrder(orderId, callback) {
   unsubscribeFromOrder();
+
+  var lastStatus = null;
+  // De-dupe across the realtime + polling paths so the callback only fires on
+  // an actual status change.
+  var emit = function (status, note) {
+    if (!status || status === lastStatus) return;
+    lastStatus = status;
+    callback({ status: status, cancelNote: note || '' });
+  };
+
+  // Realtime: instant updates when RLS permits (e.g. the admin, or before the
+  // orders table is locked down). Harmless if it never fires for anon.
   _orderChannel = _supabase
     .channel('order-tracking-' + orderId)
     .on('postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'orders', filter: 'id=eq.' + orderId },
       function (payload) {
-        if (payload.new) {
-          callback({
-            status: payload.new.status,
-            cancelNote: payload.new.cancel_note || '',
-          });
-        }
+        if (payload.new) emit(payload.new.status, payload.new.cancel_note || '');
       }
     )
     .subscribe();
+
+  // Polling fallback via the status-only SECURITY DEFINER RPC. This is the
+  // reliable path for guest customers once direct SELECT on orders is locked,
+  // since the RPC bypasses RLS and returns only {status, cancel_note}.
+  var poll = function () {
+    getOrderStatusFull(orderId).then(function (res) {
+      if (res) emit(res.status, res.cancelNote || '');
+    }).catch(function () {});
+  };
+  poll();
+  _orderPollTimer = setInterval(poll, 12000);
 }
 
 function unsubscribeFromOrder() {
   if (_orderChannel) {
     _supabase.removeChannel(_orderChannel);
     _orderChannel = null;
+  }
+  if (_orderPollTimer) {
+    clearInterval(_orderPollTimer);
+    _orderPollTimer = null;
   }
 }
 
@@ -1232,6 +1321,19 @@ async function sendPushNotification(orderId, status) {
 }
 
 // ─── Utility Functions ───────────────────────────────────────
+
+// Serve a resized/compressed variant of a Supabase Storage image through the
+// render/image transform endpoint (enabled on this project). Cuts payload ~3×.
+// Non-Storage URLs (local assets, data URIs) and empty values pass through
+// unchanged, so it is always safe to wrap an <img src>.
+function optimizedImage(url, width, quality) {
+  if (!url || typeof url !== 'string') return url || '';
+  var marker = '/storage/v1/object/public/';
+  if (url.indexOf(marker) === -1) return url;
+  var base = url.replace(marker, '/storage/v1/render/image/public/');
+  var sep = base.indexOf('?') === -1 ? '?' : '&';
+  return base + sep + 'width=' + (width || 400) + '&quality=' + (quality || 70);
+}
 
 function formatPrice(amount) {
   return amount.toLocaleString('ar-IQ') + ' د.ع';

@@ -66,6 +66,16 @@
       </div>
     </header>
 
+    <!-- Search -->
+    <div class="search-bar">
+      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" id="productSearch" placeholder="ابحث عن منتج..." autocomplete="off" enterkeyhint="search">
+      <button type="button" class="search-clear" id="searchClear" aria-label="مسح البحث" style="display:none">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="searchResults" class="search-results" style="display:none"></div>
+
     <!-- Categories (الأقسام) -->
     <section class="categories-section">
       <div class="categories-head">
@@ -140,6 +150,11 @@
           <label for="customerName">الاسم <span style="color:var(--danger)">*</span></label>
           <input type="text" id="customerName" placeholder="اسمك" required>
           <div class="error-text" id="nameError">الاسم مطلوب</div>
+        </div>
+
+        <div class="form-group">
+          <label for="deliveryNote">ملاحظة للتوصيل <span class="optional-label">(اختياري)</span></label>
+          <textarea id="deliveryNote" rows="2" maxlength="280" placeholder="مثال: اتصل عند الوصول، الطابق الثاني، بجانب الجامع..."></textarea>
         </div>
 
         <!-- Order Summary in Checkout -->

@@ -1872,3 +1872,154 @@ body {
 .section-row-name { font-weight: 700; color: var(--text-primary); }
 .section-row-count { font-size: 12px; color: var(--text-muted); }
 .section-edit, .section-del { flex-shrink: 0; }
+
+/* ─── Tabs: allow horizontal scroll when many tabs ─────────── */
+.admin-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.admin-tabs::-webkit-scrollbar { display: none; }
+.admin-tab { flex-shrink: 0; white-space: nowrap; }
+
+/* ─── Stock chip on menu rows ──────────────────────────────── */
+.menu-row-main .row-stock {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  width: fit-content;
+}
+.menu-row-main .row-stock.low { color: var(--danger); background: var(--danger-bg); border-color: var(--danger); }
+
+/* ─── Delivery note rows ───────────────────────────────────── */
+.order-card-body .order-note span:last-child { color: var(--text-primary); font-style: italic; }
+.cor-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-base);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  margin: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cor-note svg { flex-shrink: 0; color: var(--text-muted); }
+
+/* ─── Completed-orders toolbar (search / date / export) ────── */
+.completed-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.completed-search-wrap {
+  position: relative;
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+.completed-search-wrap .search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.completed-search-wrap input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 9px 38px 9px 12px;
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  outline: none;
+}
+.completed-search-wrap input:focus { border-color: var(--primary); }
+.date-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.date-preset {
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.date-preset:hover { border-color: var(--primary); }
+.date-preset.active { background: var(--primary); color: var(--text-inverse, #fff); border-color: var(--primary); }
+.date-input {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  outline: none;
+}
+.date-input:focus { border-color: var(--primary); }
+.export-csv-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-subtle, transparent);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-right: auto;
+}
+.export-csv-btn:hover { background: var(--primary); color: var(--text-inverse, #fff); }
+.load-more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-default);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.load-more-btn:hover { border-color: var(--primary); background: var(--primary-subtle, var(--bg-card-hover)); }
+
+/* ─── Promo codes admin ────────────────────────────────────── */
+.promos-admin { display: none; }
+.promos-admin.active { display: block; }
+.promo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.promo-row.inactive { opacity: 0.55; }
+.promo-row-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.promo-code-label {
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+  font-family: ui-monospace, "Cascadia Code", Menlo, monospace;
+}
+.promo-value { font-size: 12px; color: var(--text-muted); }
+.promo-del { flex-shrink: 0; }
