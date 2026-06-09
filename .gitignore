@@ -11,10 +11,12 @@ service-account*.json
 app.apk
 *.apk
 
-# ─── Bundled media already served from Supabase Storage ──────
-# Product & section photos live in the `product-images` bucket / CDN.
+# ─── Bundled product photos already served from Supabase Storage ─
+# Product photos (~96MB) live in the `product-images` bucket / CDN.
 assets/products/
-assets/categories/
+# NOTE: assets/categories/ IS committed — the `categories` table still
+# references local assets/categories/*.jpg paths (only ~1.2MB), so these
+# small section thumbnails must ship with the site to render on Vercel.
 
 # ─── Editor / OS / tooling ───────────────────────────────────
 .claude/
