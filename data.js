@@ -15,8 +15,9 @@
 //   real key is deliberately kept out of git.
 // ══════════════════════════════════════════════════════════════
 const _KENV = (typeof window !== 'undefined' && window.KAFEEL_ENV) || {};
-const SUPABASE_URL = _KENV.SUPABASE_URL || 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = _KENV.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+// .trim() guards against stray whitespace/tabs pasted into the env value.
+const SUPABASE_URL = String(_KENV.SUPABASE_URL || 'YOUR_SUPABASE_URL').trim();
+const SUPABASE_ANON_KEY = String(_KENV.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY').trim();
 // ══════════════════════════════════════════════════════════════
 
 // ══════════════════════════════════════════════════════════════

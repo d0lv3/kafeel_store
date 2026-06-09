@@ -17,22 +17,26 @@
 // ════════════════════════════════════════════════════════════════
 const fs = require('fs');
 
+// Trim values — pasting into the Vercel dashboard can pick up stray
+// whitespace/tabs/newlines that would otherwise break the URL/key.
+const clean = (v) => String(v || '').trim();
+
 const env = {
-  SUPABASE_URL: process.env.SUPABASE_URL || '',
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
+  SUPABASE_URL: clean(process.env.SUPABASE_URL),
+  SUPABASE_ANON_KEY: clean(process.env.SUPABASE_ANON_KEY),
 };
 
-if (process.env.FIREBASE_API_KEY) {
+if (clean(process.env.FIREBASE_API_KEY)) {
   env.FIREBASE_CONFIG = {
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN || '',
-    projectId: process.env.FIREBASE_PROJECT_ID || '',
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || '',
-    messagingSenderId: process.env.FIREBASE_SENDER_ID || '',
-    appId: process.env.FIREBASE_APP_ID || '',
+    apiKey: clean(process.env.FIREBASE_API_KEY),
+    authDomain: clean(process.env.FIREBASE_AUTH_DOMAIN),
+    projectId: clean(process.env.FIREBASE_PROJECT_ID),
+    storageBucket: clean(process.env.FIREBASE_STORAGE_BUCKET),
+    messagingSenderId: clean(process.env.FIREBASE_SENDER_ID),
+    appId: clean(process.env.FIREBASE_APP_ID),
   };
 }
-if (process.env.FCM_VAPID_KEY) env.FCM_VAPID_KEY = process.env.FCM_VAPID_KEY;
+if (clean(process.env.FCM_VAPID_KEY)) env.FCM_VAPID_KEY = clean(process.env.FCM_VAPID_KEY);
 
 if (!env.SUPABASE_URL && fs.existsSync('env.js')) {
   console.warn('[generate-env] No SUPABASE_URL set — keeping existing env.js untouched.');
