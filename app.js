@@ -113,11 +113,22 @@
       </button>`;
   }
 
-  // Skeleton shimmer per image: keep the shimmer until the photo loads.
+  // Skeleton shimmer per image.
+  // For item-img / modal-img the shimmer lives on the wrapper div, not the
+  // <img> itself, so transparent areas don't bleed the shimmer through.
   function hydrateImg(img) {
-    if (img.complete && img.naturalWidth > 0) { img.classList.add('loaded'); return; }
-    img.addEventListener('load', () => img.classList.add('loaded'));
-    img.addEventListener('error', () => img.classList.add('loaded'));
+    const wrap = img.parentElement;
+    const isWrap = wrap && (
+      wrap.classList.contains('item-img-wrap') ||
+      wrap.classList.contains('modal-img-wrap')
+    );
+    const markLoaded = () => {
+      img.classList.add('loaded');
+      if (isWrap) wrap.classList.add('loaded');
+    };
+    if (img.complete && img.naturalWidth > 0) { markLoaded(); return; }
+    img.addEventListener('load',  markLoaded, { once: true });
+    img.addEventListener('error', markLoaded, { once: true });
   }
   function hydrateImages(container) {
     container.querySelectorAll('img.item-img, img.cat-card-img').forEach(hydrateImg);
@@ -348,7 +359,7 @@
 
   function renderItemCard(item) {
     const imgHtml = item.image
-      ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="item-img" loading="lazy">`
+      ? `<div class="item-img-wrap"><img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="item-img" loading="lazy"></div>`
       : `<div class="item-placeholder">${PH_ICON}</div>`;
 
     const onOffer = isOnOffer(item);
@@ -388,7 +399,7 @@
 
     const imgContainer = $('#modalImageContainer');
     if (item.image) {
-      imgContainer.innerHTML = `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="modal-img">`;
+      imgContainer.innerHTML = `<div class="modal-img-wrap"><img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="modal-img"></div>`;
       const mi = imgContainer.querySelector('img.modal-img');
       if (mi) hydrateImg(mi);
     } else {

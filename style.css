@@ -349,12 +349,21 @@ body {
   pointer-events: none;
   filter: grayscale(0.6);
 }
+/* Wrapper carries the shimmer; <img> inside is bg-transparent */
+.item-img-wrap {
+  width: 100%;
+  height: 150px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #fff;
+  flex-shrink: 0;
+}
 .item-card .item-img {
   width: 100%; height: 150px;
-  border-radius: var(--radius-sm);
   object-fit: contain;
-  background: #fff;
+  background: transparent;
   padding: 6px;
+  display: block;
 }
 .item-card .item-placeholder {
   width: 100%; height: 130px;
@@ -454,12 +463,20 @@ body {
   border-radius: 2px;
   margin: 12px auto;
 }
+.modal-img-wrap {
+  width: 100%;
+  height: 220px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #fff;
+}
 .modal-img {
   width: 100%;
   height: 220px;
   object-fit: contain;
-  background: #fff;
+  background: transparent;
   padding: 8px;
+  display: block;
 }
 .modal-img-placeholder {
   width: 100%;
@@ -1945,9 +1962,19 @@ body {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
-.item-card .item-img:not(.loaded),
-.cat-card .cat-card-img:not(.loaded),
-.modal-img:not(.loaded) {
+
+/* cat-card uses object-fit:cover so shimmer lives on the <img> itself */
+.cat-card .cat-card-img:not(.loaded) {
+  background-image: linear-gradient(90deg, #ececec 25%, #f6f6f6 50%, #ececec 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+/* item-img and modal-img use object-fit:contain + padding, so the shimmer
+   goes on a wrapper div — the <img> is transparent, the wrapper shimmers.
+   Once loaded the wrapper gets .loaded and the animation stops. */
+.item-img-wrap:not(.loaded),
+.modal-img-wrap:not(.loaded) {
   background-image: linear-gradient(90deg, #ececec 25%, #f6f6f6 50%, #ececec 75%);
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.2s ease-in-out infinite;
